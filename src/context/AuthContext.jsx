@@ -8,8 +8,9 @@ export function AuthProvider({ children }) {
   const [state, setState] = useState({ loading: true, user: null, membership: null })
 
   const refresh = useCallback(async () => {
+    let user = null
     try {
-      const user = await api.getUser()
+      user = await api.getUser()
       const membership = user ? await api.getMembership() : null
       if (membership?.org) api.setOrg(membership.org.id)
       // لغة الأدمن محفوظة في إعدادات المتجر
@@ -17,7 +18,8 @@ export function AuthProvider({ children }) {
       setState({ loading: false, user, membership })
     } catch (e) {
       console.error(e)
-      setState({ loading: false, user: null, membership: null })
+      // لا نُخرج المستخدم إذا فشل تحميل العضوية فقط
+      setState({ loading: false, user, membership: null })
     }
   }, [])
 

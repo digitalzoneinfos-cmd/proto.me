@@ -34,7 +34,8 @@ export function createSupabaseApi(url, key) {
       return data.session?.user || null
     },
     onAuthChange(cb) {
-      const { data } = sb.auth.onAuthStateChange((_e, s) => cb(s?.user || null))
+      // لا نستدعي Supabase داخل المستمع مباشرة (يسبب تجمّداً) — نؤجّل الاستدعاء
+      const { data } = sb.auth.onAuthStateChange((_e, s) => { setTimeout(() => cb(s?.user || null), 0) })
       return () => data.subscription.unsubscribe()
     },
     async signUp(email, password, fullName) {
