@@ -236,3 +236,11 @@ revoke execute on function public.gen_invite_code() from public, anon, authentic
 grant execute on function public.create_organization(text, text) to authenticated;
 grant execute on function public.join_with_code(text, text) to authenticated;
 grant execute on function public.regenerate_invite_code(uuid) to authenticated;
+
+-- =====================================================================
+--  صلاحيات الجداول للمستخدمين المسجّلين (RLS يبقى هو من يحدد ما يراه كل مستخدم)
+-- =====================================================================
+grant usage on schema public to authenticated;
+grant select, update on public.organizations to authenticated;
+grant select, delete on public.memberships to authenticated;
+grant select, insert, update, delete on public.daily_entries, public.expenses, public.monthly_files, public.report_notes, public.notices, public.suppliers to authenticated;
