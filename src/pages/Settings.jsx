@@ -34,7 +34,7 @@ export default function Settings() {
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><Icon name="key" /><strong>{t('كود الدعوة السري')}</strong></div>
             <p className="muted" style={{ margin: 0, fontSize: 13 }}>{t('شاركه فقط مع المسيّرين. بعد إنشاء حسابهم يُطلب منهم هذا الكود للوصول إلى بيانات المتجر (اطلاع فقط).')}</p>
             <div className={`invite-code ${reveal ? '' : 'blur'}`}>{org?.invite_code}</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="settings-actions">
               <button className="btn" onClick={() => setReveal(!reveal)}><Icon name={reveal ? 'eyeOff' : 'eye'} size={16} />{reveal ? t('إخفاء') : t('إظهار')}</button>
               <button className="btn" onClick={() => copy(org.invite_code)}><Icon name="copy" size={16} />{t('نسخ')}</button>
               <a className="btn wa" href={`https://wa.me/?text=${encodeURIComponent(inviteMsg)}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={16} />{t('إرسال عبر واتساب')}</a>
@@ -88,7 +88,7 @@ export default function Settings() {
 
       <div className="panel panel-pad" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div><strong>{membership?.fullName}</strong><div className="muted num" style={{ fontSize: 13 }}>{membership?.email}</div></div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="settings-actions">
           <button className="btn" onClick={() => { try { localStorage.removeItem('onb-done') } catch { /* ignore */ } location.reload() }}>{t('عرض شرائح التعريف')}</button>
           {isDemo && <button className="btn danger" onClick={() => api.resetDemo()}>{t('إعادة البيانات التجريبية')}</button>}
           <button className="btn" onClick={() => api.signOut()}><Icon name="logout" size={16} />{t('خروج')}</button>
