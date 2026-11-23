@@ -404,3 +404,6 @@
   .lp-lang-btn { padding: 0 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .rv { opacity: 1; transform: none; } .lp-marquee { animation: none; } }
+.lp-tabs { display: grid; grid-template-columns: 1fr 1fr; width: 100%; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); }
+.lp-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border: 0; border-radius: 9px; background: none; color: var(--mut); font: 600 14px 'IBM Plex Sans Arabic', sans-serif; cursor: pointer; }
+.lp-tabs button.on { background: #4a5cff; color: #fff; }

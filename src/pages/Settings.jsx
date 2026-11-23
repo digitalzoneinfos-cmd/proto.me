@@ -7,6 +7,7 @@ import { Icon, WhatsAppIcon } from '../components/Icons.jsx'
 import { Confirm, useLoad, useToast } from '../components/ui.jsx'
 import { LANGS, getLang, setLang } from '../lib/i18n.jsx'
 import { fmtBytes } from '../lib/compress.js'
+import { installApp, canPrompt, isStandalone } from '../lib/install.js'
 
 export default function Settings() {
   const { org, isAdmin, setOrg, membership } = useAuth()
@@ -109,6 +110,7 @@ export default function Settings() {
       <div className="panel panel-pad" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div><strong>{membership?.fullName}</strong><div className="muted num" style={{ fontSize: 13 }}>{membership?.email}</div></div>
         <div className="settings-actions">
+          {!isStandalone() && canPrompt() && <button className="btn primary" onClick={() => installApp()}><Icon name="download" size={16} />{t('تثبيت التطبيق على هذا الجهاز')}</button>}
           <button className="btn" onClick={() => { try { localStorage.removeItem('onb-done') } catch { /* ignore */ } location.reload() }}>{t('عرض شرائح التعريف')}</button>
           {isDemo && <button className="btn danger" onClick={() => api.resetDemo()}>{t('إعادة البيانات التجريبية')}</button>}
           <button className="btn" onClick={() => api.signOut()}><Icon name="logout" size={16} />{t('خروج')}</button>

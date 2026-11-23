@@ -21,6 +21,17 @@ export const isStandalone = () =>
 export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
+export const isWindows = () => /windows/i.test(navigator.userAgent)
+export const isMac = () => /macintosh/i.test(navigator.userAgent) && !isIOS()
+/** 'edge' | 'chrome' | 'firefox' | 'safari' | 'other' */
+export const browser = () => {
+  const u = navigator.userAgent
+  if (/Edg\//.test(u)) return 'edge'
+  if (/Firefox\//.test(u)) return 'firefox'
+  if (/Chrome\//.test(u)) return 'chrome'
+  if (/Safari\//.test(u)) return 'safari'
+  return 'other'
+}
 export const isMobile = () => /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || isIOS()
 
 /** يعيد: 'installed' | 'dismissed' | 'ios' | 'desktop' | 'manual' */

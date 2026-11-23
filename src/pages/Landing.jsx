@@ -4,7 +4,7 @@ import QRCode from 'qrcode'
 import Logo, { LogoMark } from '../components/Logo.jsx'
 import GIcon from '../components/GIcons.jsx'
 import { Icon, WhatsAppIcon } from '../components/Icons.jsx'
-import { installApp, canPrompt, onPromptChange, isStandalone } from '../lib/install.js'
+import { installApp, canPrompt, onPromptChange, isStandalone, isMobile, isWindows, browser } from '../lib/install.js'
 import { t, LANGS, useLang } from '../lib/i18n.jsx'
 import '../landing.css'
 
@@ -53,6 +53,39 @@ function LangMenu() {
   )
 }
 
+/* ---------------- تثبيت على الحاسوب (Windows / Mac) ---------------- */
+function DesktopInstall({ qr, onLogin }) {
+  const [tab, setTab] = useState('pc')
+  const b = browser()
+  const steps = {
+    edge: [t('اضغط أيقونة «التطبيق متاح» في شريط العنوان'), t('أو القائمة ⋯ ← التطبيقات ← «تثبيت هذا الموقع كتطبيق»'), t('اضغط «تثبيت» — سيظهر ProtoFlow في قائمة ابدأ وشريط المهام')],
+    chrome: [t('اضغط أيقونة التثبيت في يمين شريط العنوان'), t('أو القائمة ⋮ ← «حفظ ومشاركة» ← «تثبيت الصفحة كتطبيق»'), t('اضغط «تثبيت» — سيظهر ProtoFlow في قائمة ابدأ وشريط المهام')],
+    safari: [t('من قائمة «ملف» في Safari'), t('اختر «إضافة إلى Dock»'), t('سيظهر ProtoFlow في Dock كتطبيق مستقل')],
+  }[b]
+  return (
+    <>
+      <h3>{t('تثبيت ProtoFlow')}</h3>
+      <div className="lp-tabs">
+        <button className={tab === 'pc' ? 'on' : ''} onClick={() => setTab('pc')}><Icon name="grid" size={15} />{isWindows() ? 'Windows' : t('هذا الحاسوب')}</button>
+        <button className={tab === 'phone' ? 'on' : ''} onClick={() => setTab('phone')}><Icon name="phone" size={15} />{t('الهاتف')}</button>
+      </div>
+      {tab === 'pc' ? (
+        steps ? (
+          <ol className="lp-steps-ios">{steps.map((s, i) => <li key={i}><b>{i + 1}</b><span>{s}</span></li>)}</ol>
+        ) : (
+          <p>{t('متصفحك لا يدعم تثبيت التطبيقات. افتح هذا الرابط في Microsoft Edge (موجود في Windows) أو Google Chrome ثم اضغط «حمّل التطبيق».')}</p>
+        )
+      ) : (
+        <>
+          <p>{t('افتح الكاميرا ووجّهها نحو الرمز، ثم اضغط «حمّل التطبيق» من هاتفك.')}</p>
+          <div className="lp-qr">{qr ? <img src={qr} alt="QR" /> : <span />}</div>
+        </>
+      )}
+      <button className="lp-btn ghost block" onClick={onLogin}>{t('الدخول من المتصفح')}</button>
+    </>
+  )
+}
+
 /* ---------------- نافذة التثبيت ---------------- */
 function InstallSheet({ mode, onClose, onLogin }) {
   const [qr, setQr] = useState('')
@@ -82,7 +115,8 @@ function InstallSheet({ mode, onClose, onLogin }) {
             <button className="lp-btn ghost block" onClick={onLogin}>{t('أو تابع من المتصفح')}</button>
           </>
         )}
-        {(mode === 'desktop' || mode === 'manual' || mode === 'dismissed') && (
+        {mode === 'desktop' && <DesktopInstall qr={qr} onLogin={onLogin} />}
+        {(mode === 'manual' || mode === 'dismissed') && (
           <>
             <h3>{mode === 'desktop' ? t('امسح الرمز بهاتفك') : t('تثبيت التطبيق')}</h3>
             <p>{mode === 'desktop'
@@ -285,6 +319,7 @@ export default function Landing() {
     return () => { delete document.documentElement.dataset.lp }
   }, [])
 
+  const desktop = !isMobile()
   const download = async () => {
     const r = await installApp()
     if (r === 'installed' && isStandalone()) return nav('/login')
@@ -319,14 +354,14 @@ export default function Landing() {
           <p>{t('المداخيل، المصاريف ووصولاتها، التقارير اليومية والشهرية، تنبيهات الطاقم والموردون — في تطبيق واحد للمسيّرين والإدارة.')}</p>
           <div className="lp-cta">
             <button className="lp-btn primary lg shine" onClick={download}>
-              <Icon name="download" size={18} />{t('حمّل التطبيق')}
+              <Icon name="download" size={18} />{desktop ? (isWindows() ? t('تثبيت على Windows') : t('تثبيت على الحاسوب')) : t('حمّل التطبيق')}
             </button>
             <button className="lp-btn ghost lg" onClick={() => nav('/admin')}>
               <Icon name="shield" size={18} />{t('بوابة الأدمن')}
             </button>
           </div>
           <div className="lp-meta">
-            <span><Icon name="check" size={14} stroke={2.6} />{t('iPhone و Android')}</span>
+            <span><Icon name="check" size={14} stroke={2.6} />{t('iPhone و Android و Windows')}</span>
             <span><Icon name="check" size={14} stroke={2.6} />{t('بدون متجر تطبيقات')}</span>
             <span><Icon name="check" size={14} stroke={2.6} />{t('دخول بكود دعوة سري')}</span>
           </div>
