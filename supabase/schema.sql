@@ -244,3 +244,59 @@ grant usage on schema public to authenticated;
 grant select, update on public.organizations to authenticated;
 grant select, delete on public.memberships to authenticated;
 grant select, insert, update, delete on public.daily_entries, public.expenses, public.monthly_files, public.report_notes, public.notices, public.suppliers to authenticated;
+
+-- =====================================================================
+--  سجل التعديلات (من أضاف / عدّل / حذف ومتى) — يراه كل أعضاء المتجر
+-- =====================================================================
+create table if not exists public.audit_log (
+  id         bigserial primary key,
+  org_id     uuid not null references public.organizations(id) on delete cascade,
+  at         timestamptz not null default now(),
+  user_id    uuid,
+  user_name  text,
+  action     text not null check (action in ('insert','update','delete')),
+  entity     text not null,
+  entity_id  text,
+  old_data   jsonb,
+  new_data   jsonb
+);
+create index if not exists audit_log_org_at on public.audit_log(org_id, at desc);
+alter table public.audit_log enable row level security;
+drop policy if exists audit_log_read on public.audit_log;
+create policy audit_log_read on public.audit_log for select using (is_member(org_id));
+grant select on public.audit_log to authenticated;
+
+create or replace function public.audit_trigger() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare r jsonb; o uuid; nm text;
+begin
+  r := case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end;
+  o := (r->>'org_id')::uuid;
+  select coalesce(full_name, email) into nm from memberships where org_id = o and user_id = auth.uid();
+  insert into audit_log(org_id, user_id, user_name, action, entity, entity_id, old_data, new_data)
+  values (o, auth.uid(), nm, lower(tg_op), tg_table_name, r->>'id',
+          case when tg_op in ('UPDATE','DELETE') then to_jsonb(old) end,
+          case when tg_op in ('INSERT','UPDATE') then to_jsonb(new) end);
+  return null;
+end $$;
+revoke execute on function public.audit_trigger() from public, anon, authenticated;
+
+do $$ declare t text; begin
+  foreach t in array array['daily_entries','expenses','notices','suppliers'] loop
+    execute format('drop trigger if exists audit_%1$s on public.%1$s', t);
+    execute format('create trigger audit_%1$s after insert or update or delete on public.%1$s for each row execute function public.audit_trigger()', t);
+  end loop;
+end $$;
+
+-- =====================================================================
+--  المساحة المستعملة في التخزين لكل متجر
+-- =====================================================================
+create or replace function public.storage_usage(p_org uuid) returns jsonb
+language plpgsql stable security definer set search_path = public, storage as $$
+begin
+  if not is_member(p_org) then raise exception 'forbidden'; end if;
+  return (select jsonb_build_object('bytes', coalesce(sum((metadata->>'size')::bigint),0), 'files', count(*))
+          from storage.objects where bucket_id = 'files' and name like p_org::text || '/%');
+end $$;
+revoke execute on function public.storage_usage(uuid) from public, anon;
+grant execute on function public.storage_usage(uuid) to authenticated;

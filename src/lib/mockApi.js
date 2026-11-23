@@ -90,6 +90,23 @@ export function createMockApi() {
   const listeners = new Set()
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)) } catch { /* quota / غير متاح */ } }
   const inRange = (d, from, to) => d >= from && d <= to
+  const audit = (entity, action, oldRow, newRow) => {
+    db.audit = db.audit || []
+    db.audit.unshift({ id: uid(), at: new Date().toISOString(), user_name: db.session?.full_name, action, entity, old_data: oldRow || null, new_data: newRow || null })
+    db.audit = db.audit.slice(0, 300)
+  }
+  const upsertA = (entity, arr, row) => {
+    const before = row.id ? arr.find((r) => r.id === row.id) : null
+    const prev = before ? { ...before } : null
+    const r = upsert(arr, row)
+    audit(entity, prev ? 'update' : 'insert', prev, { ...r })
+    return r
+  }
+  const delA = (entity, key, id) => {
+    const prev = db[key].find((r) => r.id === id)
+    db[key] = db[key].filter((r) => r.id !== id)
+    if (prev) audit(entity, 'delete', prev, null)
+  }
   const upsert = (arr, row) => {
     if (row.id) { const i = arr.findIndex((r) => r.id === row.id); if (i >= 0) { arr[i] = { ...arr[i], ...row }; return arr[i] } }
     const r = { ...row, id: uid(), created_at: new Date().toISOString() }
@@ -119,6 +136,13 @@ export function createMockApi() {
         : { id: 'demo-manager', email: 'manager@demo.qa', role: 'manager', full_name: 'بوخلفة خرامسية' }
       save(); listeners.forEach((l) => l(db.session))
     },
+    async resetPassword() {},
+    async updatePassword() {},
+    async storageUsage() {
+      const bytes = Object.values(db.files).reduce((a, v) => a + Math.round((v || '').length * 0.75), 0)
+      return { bytes, files: Object.keys(db.files).length }
+    },
+    listAudit: ({ limit = 50, before } = {}) => wait((db.audit || []).filter((a) => !before || a.at < before).slice(0, limit)),
     async signOut() { db.session = null; save(); listeners.forEach((l) => l(null)) },
     resetDemo() { db = seed(); save(); location.reload() },
 
@@ -147,13 +171,13 @@ export function createMockApi() {
     async saveEntry(e) {
       const existing = db.entries.find((x) => x.entry_date === e.entry_date && x.id !== e.id)
       if (existing && !e.id) e = { ...e, id: existing.id }
-      const r = upsert(db.entries, e); save(); return wait(r)
+      const r = upsertA('daily_entries', db.entries, e); save(); return wait(r)
     },
-    async deleteEntry(id) { db.entries = db.entries.filter((e) => e.id !== id); save() },
+    async deleteEntry(id) { delA('daily_entries', 'entries', id); save() },
 
     listExpenses: (f, t) => wait(db.expenses.filter((e) => inRange(e.expense_date, f, t))),
-    async saveExpense(x) { const r = upsert(db.expenses, x); save(); return wait(r) },
-    async deleteExpense(id) { db.expenses = db.expenses.filter((e) => e.id !== id); save() },
+    async saveExpense(x) { const r = upsertA('expenses', db.expenses, x); save(); return wait(r) },
+    async deleteExpense(id) { delA('expenses', 'expenses', id); save() },
 
     uploadFile(folder, file) {
       return new Promise((res, rej) => {
@@ -178,12 +202,12 @@ export function createMockApi() {
     async saveReportNotes(p, data) { db.notes[p] = data; save() },
 
     listNotices: () => wait([...db.notices].sort((a, b) => b.created_at.localeCompare(a.created_at))),
-    async saveNotice(n) { const r = upsert(db.notices, n); save(); return r },
-    async deleteNotice(id) { db.notices = db.notices.filter((n) => n.id !== id); save() },
+    async saveNotice(n) { const r = upsertA('notices', db.notices, n); save(); return r },
+    async deleteNotice(id) { delA('notices', 'notices', id); save() },
 
     listSuppliers: () => wait([...db.suppliers].sort((a, b) => a.name.localeCompare(b.name, 'ar'))),
-    async saveSupplier(s) { const r = upsert(db.suppliers, s); save(); return r },
-    async deleteSupplier(id) { db.suppliers = db.suppliers.filter((s) => s.id !== id); save() },
+    async saveSupplier(s) { const r = upsertA('suppliers', db.suppliers, s); save(); return r },
+    async deleteSupplier(id) { delA('suppliers', 'suppliers', id); save() },
   }
   return api
 }

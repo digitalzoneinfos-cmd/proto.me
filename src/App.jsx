@@ -15,6 +15,9 @@ import { DailyReport, MonthlyReport } from './pages/Reports.jsx'
 import { Expenses, Entries } from './pages/Finance.jsx'
 import Board, { Suppliers } from './pages/Board.jsx'
 import Settings from './pages/Settings.jsx'
+import Activity from './pages/Activity.jsx'
+import { ResetPassword } from './pages/Auth.jsx'
+import { inRecovery } from './lib/api.js'
 
 function Gate() {
   const { loading, user, membership, isAdmin } = useAuth()
@@ -24,6 +27,8 @@ function Gate() {
 
   const doneOnb = () => { try { localStorage.setItem('onb-done', '1') } catch { /* ignore */ } setOnb(false) }
   if (loading) return <div className="center-screen"><div className="spinner" /></div>
+
+  if (user && inRecovery()) return <ResetPassword />
 
   if (!user) {
     // شرائح التعريف تظهر للمسيّر مرة واحدة قبل تسجيل الدخول
@@ -51,6 +56,7 @@ function Gate() {
         <Route path="notices/:kind" element={<Board />} />
         <Route path="suppliers" element={<Suppliers />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="activity" element={<Activity />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>

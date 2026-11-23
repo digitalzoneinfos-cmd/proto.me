@@ -1,7 +1,7 @@
 import { t } from '../lib/i18n.jsx'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, isDemo } from '../lib/api.js'
+import { api, isDemo, endRecovery } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Icon } from '../components/Icons.jsx'
 import Logo from '../components/Logo.jsx'
@@ -40,6 +40,11 @@ export default function Auth({ portal = 'manager' }) {
     setErr(''); setInfo(''); setBusy(true)
     try {
       try { localStorage.setItem('portal', portal) } catch { /* ignore */ }
+      if (mode === 'forgot') {
+        await api.resetPassword(form.email.trim())
+        setInfo(t('إذا كان البريد مسجّلاً فستصلك رسالة فيها رابط لتعيين كلمة مرور جديدة. تحقق من صندوق الوارد والرسائل غير المرغوبة.'))
+        return
+      }
       if (mode === 'signup') {
         if (form.password.length < 6) throw new Error(t('كلمة المرور يجب أن تكون 6 أحرف على الأقل'))
         const r = await api.signUp(form.email.trim(), form.password, form.name.trim())
@@ -60,31 +65,35 @@ export default function Auth({ portal = 'manager' }) {
             <span className="tag" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', marginBottom: 12 }}>
               <Icon name={admin ? 'shield' : 'users'} size={14} />{admin ? t('حساب الأدمن') : t('حساب المسيّر')}
             </span>
-            <h2>{mode === 'login' ? t('مرحباً بعودتك') : t('إنشاء حساب جديد')}</h2>
+            <h2>{mode === 'forgot' ? t('استرجاع كلمة المرور') : mode === 'login' ? t('مرحباً بعودتك') : t('إنشاء حساب جديد')}</h2>
             <p className="muted" style={{ margin: '6px 0 0' }}>
-              {mode === 'login' ? t('سجّل الدخول للمتابعة.') : admin ? t('بعد إنشاء الحساب ستنشئ متجرك وتحصل على كود الدعوة.') : t('بعد إنشاء الحساب سيُطلب منك كود الدعوة.')}
+              {mode === 'forgot' ? t('أدخل بريدك وسنرسل لك رابطاً لتعيين كلمة مرور جديدة.') : mode === 'login' ? t('سجّل الدخول للمتابعة.') : admin ? t('بعد إنشاء الحساب ستنشئ متجرك وتحصل على كود الدعوة.') : t('بعد إنشاء الحساب سيُطلب منك كود الدعوة.')}
             </p>
           </div>
 
-          <div className="seg">
+          {mode !== 'forgot' && <div className="seg">
             <button type="button" className={mode === 'login' ? 'on' : ''} onClick={() => setMode('login')}>{t('تسجيل الدخول')}</button>
             <button type="button" className={mode === 'signup' ? 'on' : ''} onClick={() => setMode('signup')}>{t('حساب جديد')}</button>
-          </div>
+          </div>}
 
           {mode === 'signup' && (
             <div className="field"><label>{t('الاسم الكامل')}</label><input className="input" required value={form.name} onChange={set('name')} placeholder={t('مثال: بوخلفة خرامسية')} /></div>
           )}
           <div className="field"><label>{t('البريد الإلكتروني')}</label><input className="input ltr" type="email" required value={form.email} onChange={set('email')} placeholder="name@email.com" autoComplete="email" /></div>
-          <div className="field">
-            <label>{t('كلمة المرور')}</label>
+          {mode !== 'forgot' && <div className="field">
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <label>{t('كلمة المرور')}</label>
+              {mode === 'login' && <button type="button" className="link" style={{ fontSize: 12.5 }} onClick={() => { setMode('forgot'); setErr(''); setInfo('') }}>{t('نسيت كلمة المرور؟')}</button>}
+            </div>
             <div style={{ position: 'relative' }}>
               <input className="input ltr" type={show ? 'text' : 'password'} required value={form.password} onChange={set('password')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
               <button type="button" className="icon-btn" onClick={() => setShow(!show)} style={{ position: 'absolute', top: 2, insetInlineStart: 2 }} aria-label={t('إظهار كلمة المرور')}><Icon name={show ? 'eyeOff' : 'eye'} size={16} /></button>
             </div>
-          </div>
+          </div>}
           {err && <div className="err">{err}</div>}
           {info && <div style={{ color: 'var(--green)', fontSize: 13 }}>{info}</div>}
-          <button className="btn primary block" style={{ height: 48 }} disabled={busy}>{busy ? '…' : mode === 'login' ? t('دخول') : t('إنشاء الحساب')}</button>
+          <button className="btn primary block" style={{ height: 48 }} disabled={busy}>{busy ? '…' : mode === 'forgot' ? t('إرسال رابط الاسترجاع') : mode === 'login' ? t('دخول') : t('إنشاء الحساب')}</button>
+          {mode === 'forgot' && <button type="button" className="link" onClick={() => { setMode('login'); setErr(''); setInfo('') }}>{t('العودة إلى تسجيل الدخول')}</button>}
 
           {isDemo && (
             <div className="panel panel-pad" style={{ display: 'grid', gap: 10, borderStyle: 'dashed' }}>
@@ -154,6 +163,46 @@ export function Setup() {
             </button>
             <button type="button" className="link" onClick={() => api.signOut()}>{t('خروج')}</button>
           </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/** شاشة تعيين كلمة مرور جديدة بعد فتح رابط الاسترجاع */
+export function ResetPassword() {
+  const { refresh } = useAuth()
+  const [pw, setPw] = useState('')
+  const [pw2, setPw2] = useState('')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async (e) => {
+    e.preventDefault(); setErr('')
+    if (pw.length < 6) return setErr(t('كلمة المرور يجب أن تكون 6 أحرف على الأقل'))
+    if (pw !== pw2) return setErr(t('كلمتا المرور غير متطابقتين'))
+    setBusy(true)
+    try {
+      await api.updatePassword(pw)
+      endRecovery()
+      try { history.replaceState(null, '', location.pathname + '#/') } catch { /* ignore */ }
+      await refresh()
+      location.reload()
+    } catch (e) { setErr(e.message) } finally { setBusy(false) }
+  }
+  return (
+    <div className="auth">
+      <Side admin={false} />
+      <div className="auth-main">
+        <form className="auth-card" onSubmit={submit}>
+          <div style={{ width: 56, height: 56, border: '1px solid var(--line)', display: 'grid', placeItems: 'center', borderRadius: 14 }}><Icon name="lock" size={24} /></div>
+          <div>
+            <h2>{t('كلمة مرور جديدة')}</h2>
+            <p className="muted" style={{ margin: '6px 0 0' }}>{t('اختر كلمة مرور جديدة لحسابك.')}</p>
+          </div>
+          <div className="field"><label>{t('كلمة المرور الجديدة')}</label><input className="input ltr" type="password" required autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus /></div>
+          <div className="field"><label>{t('تأكيد كلمة المرور')}</label><input className="input ltr" type="password" required autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} /></div>
+          {err && <div className="err">{err}</div>}
+          <button className="btn primary block" style={{ height: 48 }} disabled={busy}>{busy ? '…' : t('حفظ كلمة المرور')}</button>
         </form>
       </div>
     </div>

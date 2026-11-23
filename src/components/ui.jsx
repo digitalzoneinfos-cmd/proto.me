@@ -2,6 +2,7 @@ import { t } from '../lib/i18n.jsx'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Icon } from './Icons.jsx'
 import { api } from '../lib/api.js'
+import { compressImage, fmtBytes } from '../lib/compress.js'
 import { isImage, monthLabel, shiftMonth, shiftDay, dmy, dayName } from '../lib/format.js'
 
 /* ---------- Toast ---------- */
@@ -138,11 +139,15 @@ export function Uploader({ folder, paths, onChange, label = t('اسحب صور �
     setBusy(true)
     try {
       const added = []
-      for (const f of files) {
-        if (f.size > 10 * 1024 * 1024) { toast(t('الملف {f} أكبر من 10MB', { f: f.name })); continue }
+      let before = 0, after = 0
+      for (const f0 of files) {
+        const f = await compressImage(f0)
+        before += f0.size; after += f.size
+        if (f.size > 10 * 1024 * 1024) { toast(t('الملف {f} أكبر من 10MB', { f: f0.name })); continue }
         added.push(await api.uploadFile(folder, f))
       }
       onChange([...paths, ...added])
+      if (added.length && before - after > 200 * 1024) toast(t('تم ضغط الصور: {a} ← {b}', { a: fmtBytes(before), b: fmtBytes(after) }))
     } catch (e) { toast('تعذر رفع الملف: ' + e.message) }
     finally { setBusy(false) }
   }

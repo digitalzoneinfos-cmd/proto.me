@@ -48,6 +48,14 @@ export function createSupabaseApi(url, key) {
       fail(error)
     },
     signOut: () => sb.auth.signOut(),
+    async resetPassword(email) {
+      const { error } = await sb.auth.resetPasswordForEmail(email)
+      fail(error)
+    },
+    async updatePassword(password) {
+      const { error } = await sb.auth.updateUser({ password })
+      fail(error)
+    },
 
     // ---------- membership ----------
     async getMembership() {
@@ -125,6 +133,17 @@ export function createSupabaseApi(url, key) {
       return q(sb.from('notices').insert(row).select().single())
     },
     deleteNotice: (id) => q(sb.from('notices').delete().eq('id', id)),
+
+    // ---------- storage usage / audit ----------
+    async storageUsage() {
+      const r = await q(sb.rpc('storage_usage', { p_org: orgId }))
+      return { bytes: Number(r?.bytes || 0), files: Number(r?.files || 0) }
+    },
+    listAudit: ({ limit = 50, before } = {}) => {
+      let qq = sb.from('audit_log').select('*').eq('org_id', orgId).order('at', { ascending: false }).limit(limit)
+      if (before) qq = qq.lt('at', before)
+      return q(qq)
+    },
 
     // ---------- suppliers ----------
     listSuppliers: () => q(sb.from('suppliers').select('*').eq('org_id', orgId).order('name')),

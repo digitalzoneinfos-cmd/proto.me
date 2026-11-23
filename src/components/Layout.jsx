@@ -23,13 +23,13 @@ const NAV = [
     { to: '/notices/concern', label: 'انشغالات الطاقم', icon: 'users', kind: 'concern' },
   ] },
   { group: 'جهات الاتصال', items: [{ to: '/suppliers', label: 'الموردون', icon: 'truck' }] },
-  { group: null, items: [{ to: '/settings', label: 'الإعدادات', icon: 'settings' }] },
+  { group: null, items: [{ to: '/activity', label: 'سجل التعديلات', icon: 'history' }, { to: '/settings', label: 'الإعدادات', icon: 'settings' }] },
 ]
 
 const TITLES = {
   '/': 'نظرة عامة', '/daily': 'التقرير اليومي', '/monthly': 'التقرير الشهري', '/entries': 'إدخال المداخيل',
   '/expenses': 'المصاريف', '/notices/supply': 'مستلزمات المتجر', '/notices/suggestion': 'الاقتراحات',
-  '/notices/concern': 'انشغالات الطاقم', '/suppliers': 'الموردون', '/settings': 'الإعدادات',
+  '/notices/concern': 'انشغالات الطاقم', '/suppliers': 'الموردون', '/settings': 'الإعدادات', '/activity': 'سجل التعديلات',
 }
 
 export function useTheme() {

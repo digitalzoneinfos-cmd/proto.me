@@ -6,6 +6,7 @@ import { dmy, iso } from '../lib/format.js'
 import { Icon, WhatsAppIcon } from '../components/Icons.jsx'
 import { Confirm, useLoad, useToast } from '../components/ui.jsx'
 import { LANGS, getLang, setLang } from '../lib/i18n.jsx'
+import { fmtBytes } from '../lib/compress.js'
 
 export default function Settings() {
   const { org, isAdmin, setOrg, membership } = useAuth()
@@ -15,6 +16,8 @@ export default function Settings() {
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [rm, setRm] = useState(null)
   const members = useLoad(() => api.listMembers(), [])
+  const usage = useLoad(() => (isAdmin ? api.storageUsage() : Promise.resolve(null)), [isAdmin])
+  const LIMIT = 1024 ** 3
   const [lang, setL] = useState(org?.language || getLang())
   const saveLang = async () => {
     try { const o = await api.updateOrg({ language: lang }); setOrg({ ...org, ...o, language: lang }) } catch (e) { toast(e.message); return }
@@ -51,6 +54,23 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {isAdmin && usage.data && (() => {
+        const pct = Math.min(100, (usage.data.bytes / LIMIT) * 100)
+        return (
+          <div className="panel panel-pad" style={{ display: 'grid', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <strong>{t('مساحة التخزين (الصور والملفات)')}</strong>
+              <span className="muted num">{fmtBytes(usage.data.bytes)} / 1 GB</span>
+            </div>
+            <div className={`progress ${pct > 80 ? 'red' : ''}`}><i style={{ width: `${Math.max(pct, 0.5)}%` }} /></div>
+            <div className="muted" style={{ fontSize: 13 }}>
+              {t('{n} ملف · تُضغط الصور تلقائياً قبل الرفع لتوفير المساحة.', { n: usage.data.files })}
+              {pct > 80 && <b style={{ color: 'var(--red)' }}> {t('المساحة تقترب من الامتلاء.')}</b>}
+            </div>
+          </div>
+        )
+      })()}
 
       {isAdmin && (
         <div className="panel panel-pad" style={{ display: 'grid', gap: 14 }}>

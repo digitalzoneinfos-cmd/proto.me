@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import en from '../i18n/en.js'
 import fr from '../i18n/fr.js'
+import extra from '../i18n/extra.js'
+
+for (const k in extra) { en[k] = extra[k][0]; fr[k] = extra[k][1] }
 
 /**
  * نظام اللغات: النص العربي هو المفتاح، والقاموسان en / fr يترجمانه.
